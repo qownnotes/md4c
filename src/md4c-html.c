@@ -44,8 +44,8 @@
 
 
 
-typedef struct MD_RENDER_HTML_tag MD_RENDER_HTML;
-struct MD_RENDER_HTML_tag {
+typedef struct MD_HTML_tag MD_HTML;
+struct MD_HTML_tag {
     void (*process_output)(const MD_CHAR*, MD_SIZE, void*);
     void* userdata;
     unsigned flags;
@@ -68,7 +68,7 @@ struct MD_RENDER_HTML_tag {
 
 
 static inline void
-render_verbatim(MD_RENDER_HTML* r, const MD_CHAR* text, MD_SIZE size)
+render_verbatim(MD_HTML* r, const MD_CHAR* text, MD_SIZE size)
 {
     r->process_output(text, size, r->userdata);
 }
@@ -80,7 +80,7 @@ render_verbatim(MD_RENDER_HTML* r, const MD_CHAR* text, MD_SIZE size)
 
 
 static void
-render_html_escaped(MD_RENDER_HTML* r, const MD_CHAR* data, MD_SIZE size)
+render_html_escaped(MD_HTML* r, const MD_CHAR* data, MD_SIZE size)
 {
     MD_OFFSET beg = 0;
     MD_OFFSET off = 0;
@@ -115,7 +115,7 @@ render_html_escaped(MD_RENDER_HTML* r, const MD_CHAR* data, MD_SIZE size)
 }
 
 static void
-render_url_escaped(MD_RENDER_HTML* r, const MD_CHAR* data, MD_SIZE size)
+render_url_escaped(MD_HTML* r, const MD_CHAR* data, MD_SIZE size)
 {
     static const MD_CHAR hex_chars[] = "0123456789ABCDEF";
     MD_OFFSET beg = 0;
@@ -163,8 +163,8 @@ hex_val(char ch)
 }
 
 static void
-render_utf8_codepoint(MD_RENDER_HTML* r, unsigned codepoint,
-                      void (*fn_append)(MD_RENDER_HTML*, const MD_CHAR*, MD_SIZE))
+render_utf8_codepoint(MD_HTML* r, unsigned codepoint,
+                      void (*fn_append)(MD_HTML*, const MD_CHAR*, MD_SIZE))
 {
     static const MD_CHAR utf8_replacement_char[] = { 0xef, 0xbf, 0xbd };
 
@@ -200,10 +200,10 @@ render_utf8_codepoint(MD_RENDER_HTML* r, unsigned codepoint,
 /* Translate entity to its UTF-8 equivalent, or output the verbatim one
  * if such entity is unknown (or if the translation is disabled). */
 static void
-render_entity(MD_RENDER_HTML* r, const MD_CHAR* text, MD_SIZE size,
-              void (*fn_append)(MD_RENDER_HTML*, const MD_CHAR*, MD_SIZE))
+render_entity(MD_HTML* r, const MD_CHAR* text, MD_SIZE size,
+              void (*fn_append)(MD_HTML*, const MD_CHAR*, MD_SIZE))
 {
-    if(r->flags & MD_RENDER_FLAG_VERBATIM_ENTITIES) {
+    if(r->flags & MD_HTML_FLAG_VERBATIM_ENTITIES) {
         fn_append(r, text, size);
         return;
     }
@@ -243,8 +243,8 @@ render_entity(MD_RENDER_HTML* r, const MD_CHAR* text, MD_SIZE size,
 }
 
 static void
-render_attribute(MD_RENDER_HTML* r, const MD_ATTRIBUTE* attr,
-                 void (*fn_append)(MD_RENDER_HTML*, const MD_CHAR*, MD_SIZE))
+render_attribute(MD_HTML* r, const MD_ATTRIBUTE* attr,
+                 void (*fn_append)(MD_HTML*, const MD_CHAR*, MD_SIZE))
 {
     int i;
 
@@ -264,7 +264,7 @@ render_attribute(MD_RENDER_HTML* r, const MD_ATTRIBUTE* attr,
 
 
 static void
-render_open_ol_block(MD_RENDER_HTML* r, const MD_BLOCK_OL_DETAIL* det)
+render_open_ol_block(MD_HTML* r, const MD_BLOCK_OL_DETAIL* det)
 {
     char buf[64];
 
@@ -278,7 +278,7 @@ render_open_ol_block(MD_RENDER_HTML* r, const MD_BLOCK_OL_DETAIL* det)
 }
 
 static void
-render_open_li_block(MD_RENDER_HTML* r, const MD_BLOCK_LI_DETAIL* det)
+render_open_li_block(MD_HTML* r, const MD_BLOCK_LI_DETAIL* det)
 {
     if(det->is_task) {
         RENDER_VERBATIM(r, "<li class=\"task-list-item\">"
@@ -292,7 +292,7 @@ render_open_li_block(MD_RENDER_HTML* r, const MD_BLOCK_LI_DETAIL* det)
 }
 
 static void
-render_open_code_block(MD_RENDER_HTML* r, const MD_BLOCK_CODE_DETAIL* det)
+render_open_code_block(MD_HTML* r, const MD_BLOCK_CODE_DETAIL* det)
 {
     RENDER_VERBATIM(r, "<pre><code");
 
@@ -307,7 +307,7 @@ render_open_code_block(MD_RENDER_HTML* r, const MD_BLOCK_CODE_DETAIL* det)
 }
 
 static void
-render_open_td_block(MD_RENDER_HTML* r, const MD_CHAR* cell_type, const MD_BLOCK_TD_DETAIL* det)
+render_open_td_block(MD_HTML* r, const MD_CHAR* cell_type, const MD_BLOCK_TD_DETAIL* det)
 {
     RENDER_VERBATIM(r, "<");
     RENDER_VERBATIM(r, cell_type);
@@ -321,7 +321,7 @@ render_open_td_block(MD_RENDER_HTML* r, const MD_CHAR* cell_type, const MD_BLOCK
 }
 
 static void
-render_open_a_span(MD_RENDER_HTML* r, const MD_SPAN_A_DETAIL* det)
+render_open_a_span(MD_HTML* r, const MD_SPAN_A_DETAIL* det)
 {
     RENDER_VERBATIM(r, "<a href=\"");
     render_attribute(r, &det->href, render_url_escaped);
@@ -335,7 +335,7 @@ render_open_a_span(MD_RENDER_HTML* r, const MD_SPAN_A_DETAIL* det)
 }
 
 static void
-render_open_img_span(MD_RENDER_HTML* r, const MD_SPAN_IMG_DETAIL* det)
+render_open_img_span(MD_HTML* r, const MD_SPAN_IMG_DETAIL* det)
 {
     RENDER_VERBATIM(r, "<img src=\"");
     render_attribute(r, &det->src, render_url_escaped);
@@ -346,7 +346,7 @@ render_open_img_span(MD_RENDER_HTML* r, const MD_SPAN_IMG_DETAIL* det)
 }
 
 static void
-render_close_img_span(MD_RENDER_HTML* r, const MD_SPAN_IMG_DETAIL* det)
+render_close_img_span(MD_HTML* r, const MD_SPAN_IMG_DETAIL* det)
 {
     if(det->title.text != NULL) {
         RENDER_VERBATIM(r, "\" title=\"");
@@ -359,7 +359,7 @@ render_close_img_span(MD_RENDER_HTML* r, const MD_SPAN_IMG_DETAIL* det)
 }
 
 static void
-render_open_wikilink_span(MD_RENDER_HTML* r, const MD_SPAN_WIKILINK_DETAIL* det)
+render_open_wikilink_span(MD_HTML* r, const MD_SPAN_WIKILINK_DETAIL* det)
 {
     RENDER_VERBATIM(r, "<x-wikilink data-target=\"");
     render_attribute(r, &det->target, render_html_escaped);
@@ -376,7 +376,7 @@ static int
 enter_block_callback(MD_BLOCKTYPE type, void* detail, void* userdata)
 {
     static const MD_CHAR* head[6] = { "<h1>", "<h2>", "<h3>", "<h4>", "<h5>", "<h6>" };
-    MD_RENDER_HTML* r = (MD_RENDER_HTML*) userdata;
+    MD_HTML* r = (MD_HTML*) userdata;
 
     switch(type) {
         case MD_BLOCK_DOC:      /* noop */ break;
@@ -404,7 +404,7 @@ static int
 leave_block_callback(MD_BLOCKTYPE type, void* detail, void* userdata)
 {
     static const MD_CHAR* head[6] = { "</h1>\n", "</h2>\n", "</h3>\n", "</h4>\n", "</h5>\n", "</h6>\n" };
-    MD_RENDER_HTML* r = (MD_RENDER_HTML*) userdata;
+    MD_HTML* r = (MD_HTML*) userdata;
 
     switch(type) {
         case MD_BLOCK_DOC:      /*noop*/ break;
@@ -431,7 +431,7 @@ leave_block_callback(MD_BLOCKTYPE type, void* detail, void* userdata)
 static int
 enter_span_callback(MD_SPANTYPE type, void* detail, void* userdata)
 {
-    MD_RENDER_HTML* r = (MD_RENDER_HTML*) userdata;
+    MD_HTML* r = (MD_HTML*) userdata;
 
     if(r->image_nesting_level > 0) {
         /* We are inside a Markdown image label. Markdown allows to use any
@@ -470,7 +470,7 @@ enter_span_callback(MD_SPANTYPE type, void* detail, void* userdata)
 static int
 leave_span_callback(MD_SPANTYPE type, void* detail, void* userdata)
 {
-    MD_RENDER_HTML* r = (MD_RENDER_HTML*) userdata;
+    MD_HTML* r = (MD_HTML*) userdata;
 
     if(r->image_nesting_level > 0) {
         /* Ditto as in enter_span_callback(), except we have to allow the
@@ -498,7 +498,7 @@ leave_span_callback(MD_SPANTYPE type, void* detail, void* userdata)
 static int
 text_callback(MD_TEXTTYPE type, const MD_CHAR* text, MD_SIZE size, void* userdata)
 {
-    MD_RENDER_HTML* r = (MD_RENDER_HTML*) userdata;
+    MD_HTML* r = (MD_HTML*) userdata;
 
     switch(type) {
         case MD_TEXT_NULLCHAR:  render_utf8_codepoint(r, 0x0000, render_verbatim); break;
@@ -515,17 +515,17 @@ text_callback(MD_TEXTTYPE type, const MD_CHAR* text, MD_SIZE size, void* userdat
 static void
 debug_log_callback(const char* msg, void* userdata)
 {
-    MD_RENDER_HTML* r = (MD_RENDER_HTML*) userdata;
-    if(r->flags & MD_RENDER_FLAG_DEBUG)
+    MD_HTML* r = (MD_HTML*) userdata;
+    if(r->flags & MD_HTML_FLAG_DEBUG)
         fprintf(stderr, "MD4C: %s\n", msg);
 }
 
 int
-md_render_html(const MD_CHAR* input, MD_SIZE input_size,
-               void (*process_output)(const MD_CHAR*, MD_SIZE, void*),
-               void* userdata, unsigned parser_flags, unsigned renderer_flags)
+md_html(const MD_CHAR* input, MD_SIZE input_size,
+        void (*process_output)(const MD_CHAR*, MD_SIZE, void*),
+        void* userdata, unsigned parser_flags, unsigned renderer_flags)
 {
-    MD_RENDER_HTML render = { process_output, userdata, renderer_flags, 0, { 0 } };
+    MD_HTML render = { process_output, userdata, renderer_flags, 0, { 0 } };
     int i;
 
     MD_PARSER parser = {
