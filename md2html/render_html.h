@@ -26,7 +26,7 @@
 #ifndef MD4C_RENDER_HTML_H
 #define MD4C_RENDER_HTML_H
 
-#include "md4c.h"
+#include "../md4c/md4c.h"
 
 #ifdef __cplusplus
     extern "C" {
