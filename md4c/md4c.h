@@ -170,11 +170,18 @@ typedef enum MD_TEXTTYPE {
      * entity text into the MD_RENDERER::text_callback(). */
     MD_TEXT_ENTITY,
 
-    /* Text in a code block (inside MD_BLOCK_CODE) or inlined code (`code`).
-     * If it is inside MD_BLOCK_CODE, it includes spaces for indentation and
-     * '\n' for new lines. MD_TEXT_BR and MD_TEXT_SOFTBR are not sent for this
-     * kind of text. */
+    /* Text in inlined code (`code`) or Indented Code Blocks but not fenced codeblocks.*/
     MD_TEXT_CODE,
+
+   /*QON SPECIFIC
+    * Waqar144: we separate this from inline code because we have to do highlighting
+    * and we'll html-escape this ourselves.
+    *
+   /* Text in a fenced code block (inside MD_BLOCK_CODE)
+    * If it is inside MD_BLOCK_CODE, it includes spaces for indentation and
+    * '\n' for new lines. MD_TEXT_BR and MD_TEXT_SOFTBR are not sent for this
+    * kind of text. */
+    MD_TEXT_FENCED_CODE,
 
     /* Text is a raw HTML. If it is contents of a raw HTML block (i.e. not
      * an inline raw HTML), then MD_TEXT_BR and MD_TEXT_SOFTBR are not used.

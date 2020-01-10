@@ -4592,7 +4592,11 @@ md_process_code_block_contents(MD_CTX* ctx, int is_fenced, const MD_VERBATIMLINE
     if(n_lines == 0)
         return 0;
 
-    return md_process_verbatim_block_contents(ctx, MD_TEXT_CODE, lines, n_lines);
+    if(is_fenced)
+        return md_process_verbatim_block_contents(ctx, MD_TEXT_FENCED_CODE, lines, n_lines);
+    else
+        return md_process_verbatim_block_contents(ctx, MD_TEXT_CODE, lines, n_lines);
+
 }
 
 static int

@@ -505,6 +505,9 @@ text_callback(MD_TEXTTYPE type, const MD_CHAR* text, MD_SIZE size, void* userdat
         case MD_TEXT_BR:        RENDER_VERBATIM(r, (r->image_nesting_level == 0 ? "<br>\n" : " ")); break;
         case MD_TEXT_SOFTBR:    RENDER_VERBATIM(r, (r->image_nesting_level == 0 ? "\n" : " ")); break;
         case MD_TEXT_HTML:      render_verbatim(r, text, size); break;
+        /* QON SPECIFIC */
+        /*Render fenced code blocks verbatim, no html escaping */
+        case MD_TEXT_FENCED_CODE: render_verbatim(r, text, size); break;
         case MD_TEXT_ENTITY:    render_entity(r, text, size, render_html_escaped); break;
         default:                render_html_escaped(r, text, size); break;
     }
