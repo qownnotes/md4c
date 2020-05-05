@@ -5527,6 +5527,10 @@ md_enter_child_containers(MD_CTX* ctx, int n_children, unsigned data)
                 MD_CHECK(md_push_container_bytes(ctx, MD_BLOCK_QUOTE, 0, 0, MD_BLOCK_CONTAINER_OPENER));
                 break;
 
+            // 0 character will cause a crash
+            case 0:
+                break;
+
             default:
                 MD_UNREACHABLE();
                 break;
@@ -5566,6 +5570,10 @@ md_leave_child_containers(MD_CTX* ctx, int n_keep)
             case _T('>'):
                 MD_CHECK(md_push_container_bytes(ctx, MD_BLOCK_QUOTE, 0,
                                 0, MD_BLOCK_CONTAINER_CLOSER));
+                break;
+
+            // 0 character will cause a crash
+            case 0:
                 break;
 
             default:
