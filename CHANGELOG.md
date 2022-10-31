@@ -2,15 +2,148 @@
 # MD4C Change Log
 
 
-## Next Version (Work in Progress)
+## Version 0.4.8
+
+Fixes:
+
+ * [#149](https://github.com/mity/md4c/issues/149):
+   A HTML block started in a container block (and not explicitly finished in
+   the block) could eat 1 line of actual contents.
+
+ * [#150](https://github.com/mity/md4c/issues/150):
+   Fix md2html utility to output proper DOCTYPE and HTML tags when `--full-html`
+   command line options is used, accordingly to the expected output format
+   (HTML or XHTML).
+
+ * [#152](https://github.com/mity/md4c/issues/152):
+   Suppress recognition of a permissive autolink if it would otherwise form a
+   complete body of an outer inline link.
+
+ * [#153](https://github.com/mity/md4c/issues/153),
+   [#154](https://github.com/mity/md4c/issues/154):
+   Set `MD_BLOCK_UL_DETAIL::mark` and `MD_BLOCK_OL_DETAIL::mark_delimiter`
+   correctly, even when the blocks are nested at the same line in a complicated
+   ways.
+
+ * [#155](https://github.com/mity/md4c/issues/155):
+   Avoid reading 1 character beyond the input size in some complex cases.
+
+
+## Version 0.4.7
+
+Changes:
+
+ * Add `MD_TABLE_DETAIL` structure into the API. The structure describes column
+   count and row count of the table, and pointer to it is passed into the
+   application-provided block callback with the `MD_BLOCK_TABLE` block type.
+
+Fixes:
+
+ * [#131](https://github.com/mity/md4c/issues/131):
+   Fix handling of a reference image nested in a reference link.
+
+ * [#135](https://github.com/mity/md4c/issues/135):
+   Handle unmatched parenthesis pairs inside a permissive URL and WWW auto-links
+   in a way more compatible with the GFM.
+
+ * [#138](https://github.com/mity/md4c/issues/138):
+   The tag `<tbody></tbody>` is now suppressed whenever the table has zero body
+   rows.
+
+ * [#139](https://github.com/mity/md4c/issues/139):
+   Recognize a list item mark even when EOF follows it.
+
+ * [#142](https://github.com/mity/md4c/issues/142):
+   Fix reference link definition label matching in a case when the label ends
+   with a Unicode character with non-trivial case folding mapping.
+
+
+## Version 0.4.6
+
+Fixes:
+
+ * [#130](https://github.com/mity/md4c/issues/130):
+   Fix `ISANYOF` macro, which could provide unexpected results when encountering
+   zero byte in the input text; in some cases leading to broken internal state
+   of the parser.
+
+   The bug could result in denial of service and possibly also to other security
+   implications. Applications are advised to update to 0.4.6.
+
+
+## Version 0.4.5
+
+Fixes:
+
+ * [#118](https://github.com/mity/md4c/issues/118):
+   Fix HTML renderer's `MD_HTML_FLAG_VERBATIM_ENTITIES` flag, exposed in the
+   `md2html` utility via `--fverbatim-entities`.
+
+ * [#124](https://github.com/mity/md4c/issues/124):
+   Fix handling of indentation of 16 or more spaces in the fenced code blocks.
+
+
+## Version 0.4.4
+
+Changes:
+
+ * Make Unicode-specific code compliant to Unicode 13.0.
+
+New features:
+
+ * The HTML renderer, developed originally as the heart of the `md2html`
+   utility, is now built as a standalone library, in order to simplify its
+   reuse in applications.
+
+ * With `MD_HTML_FLAG_SKIP_UTF8_BOM`, the HTML renderer now skips UTF-8 byte
+   order mark (BOM) if the input begins with it, before passing to the Markdown
+   parser.
+
+   `md2html` utility automatically enables the flag (unless it is custom-built
+   with `-DMD4C_USE_ASCII`).
+
+ * With `MD_HTML_FLAG_XHTML`, The HTML renderer generates XHTML instead of
+   HTML.
+
+   This effectively means `<br />` instead of `<br>`, `<hr />` instead of
+   `<hr>`, and `<img ... />` instead of `<img ...>`.
+
+   `md2html` utility now understands the command line option `-x` or `--xhtml`
+   enabling the XHTML mode.
+
+Fixes:
+
+ * [#113](https://github.com/mity/md4c/issues/113):
+   Add missing folding info data for the following Unicode characters:
+   `U+0184`, `U+018a`, `U+01b2`, `U+01b5`, `U+01f4`, `U+0372`, `U+038f`,
+   `U+1c84`, `U+1fb9`, `U+1fbb`, `U+1fd9`, `U+1fdb`, `U+1fe9`, `U+1feb`,
+   `U+1ff9`, `U+1ffb`, `U+2c7f`, `U+2ced`, `U+a77b`, `U+a792`, `U+a7c9`.
+
+   Due the bug, the link definition label matching did not work in the case
+   insensitive way for these characters.
+
+
+## Version 0.4.3
 
 New features:
 
  * With `MD_FLAG_UNDERLINE`, spans enclosed in underscore (`_foo_`) are seen
-   as underline (`MD_SPAN_UNDERLINE`) rather then an ordinary emphasis or
+   as underline (`MD_SPAN_UNDERLINE`) rather than an ordinary emphasis or
    strong emphasis.
 
 Changes:
+
+ * The implementation of wiki-links extension (with `MD_FLAG_WIKILINKS`) has
+   been simplified.
+
+    - A noticeable increase of MD4C's memory footprint introduced by the
+      extension implementation in 0.4.0 has been removed.
+    - The priority handling towards other inline elements have been unified.
+      (This affects an obscure case where syntax of an image was in place of
+      wiki-link destination made the wiki-link invalid. Now *all* inline spans
+      in the wiki-link destination, including the images, is suppressed.)
+    - The length limitation of 100 characters now always applies to wiki-link
+      destination.
 
  * Recognition of strike-through spans (with the flag `MD_FLAG_STRIKETHROUGH`)
    has become much stricter and, arguably, reasonable.
@@ -47,6 +180,10 @@ Fixes:
  * [#100](https://github.com/mity/md4c/issues/100):
    Fixed an off-by-one error in the maximal length limit of some segments
    of e-mail addresses used in autolinks.
+
+ * [#107](https://github.com/mity/md4c/issues/107):
+   Fix mis-detection of asterisk-encoded emphasis in some corner cases when
+   length of the opener and closer differs, as in `***foo *bar baz***`.
 
 
 ## Version 0.4.2
@@ -92,7 +229,7 @@ Changes:
 Fixes:
 
  * [#94](https://github.com/mity/md4c/issues/94):
-   `md_build_ref_def_hashtable()`: Do not allocate more memory then strictly
+   `md_build_ref_def_hashtable()`: Do not allocate more memory than strictly
    needed.
 
  * [#95](https://github.com/mity/md4c/issues/95):
