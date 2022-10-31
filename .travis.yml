@@ -1,7 +1,10 @@
 # YAML definition for travis-ci.com continuous integration.
 # See https://docs.travis-ci.com/user/languages/c
-
+arch:
+    - amd64
+    - ppc64le
 language: c
+dist: bionic
 
 compiler:
     - gcc
@@ -15,7 +18,10 @@ addons:
 before_script:
     - mkdir build
     - cd build
-    - CFLAGS='--coverage -g -O0' cmake -DCMAKE_BUILD_TYPE=Debug -G 'Unix Makefiles' ..
+    # We enforce -Wdeclaration-after-statement because Qt project needs to
+    # build MD4C with Integrity compiler which chokes whenever a declaration
+    # is not at the beginning of a block.
+    - CFLAGS='--coverage -g -O0 -Wall -Wdeclaration-after-statement -Werror' cmake -DCMAKE_BUILD_TYPE=Debug -G 'Unix Makefiles' ..
 
 script:
     - make VERBOSE=1

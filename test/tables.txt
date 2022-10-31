@@ -301,8 +301,6 @@ x|x
 <th>x</th>
 </tr>
 </thead>
-<tbody>
-</tbody>
 </table>
 </li>
 </ul>
@@ -335,5 +333,46 @@ But the last line is not part of it due its indentation.)
 <td></td>
 </tr>
 </tbody>
+</table>
+````````````````````````````````
+
+
+### [Issue 104](https://github.com/mity/md4c/issues/104)
+
+```````````````````````````````` example
+A | B
+--- | ---
+[x](url)
+.
+<table>
+<thead>
+<tr>
+<th>A</th>
+<th>B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="url">x</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+````````````````````````````````
+
+
+### [Issue 138](https://github.com/mity/md4c/issues/138)
+
+```````````````````````````````` example
+| abc | def |
+| --- | --- |
+.
+<table>
+<thead>
+<tr>
+<th>abc</th>
+<th>def</th>
+</tr>
+</thead>
 </table>
 ````````````````````````````````

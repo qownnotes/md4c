@@ -256,6 +256,74 @@ foo
 (Note the `x` here which turns it over the max. allowed length limit.)
 
 
+### [Issue 107](https://github.com/mity/md4c/issues/107)
+
+```````````````````````````````` example
+***foo *bar baz***
+.
+<p>*<strong>foo <em>bar baz</em></strong></p>
+
+````````````````````````````````
+
+
+### [Issue 124](https://github.com/mity/md4c/issues/124)
+
+```````````````````````````````` example
+~~~
+                x
+~~~
+
+~~~
+                 x
+~~~
+.
+<pre><code>                x
+</code></pre>
+<pre><code>                 x
+</code></pre>
+````````````````````````````````
+
+
+### [Issue 131](https://github.com/mity/md4c/issues/131)
+
+```````````````````````````````` example
+[![alt][img]][link]
+
+[img]: img_url
+[link]: link_url
+.
+<p><a href="link_url"><img src="img_url" alt="alt"></a></p>
+````````````````````````````````
+
+
+### [Issue 142](https://github.com/mity/md4c/issues/142)
+
+```````````````````````````````` example
+[fooﬗ]: /url
+[fooﬕ]
+.
+<p>[fooﬕ]</p>
+````````````````````````````````
+
+
+### [Issue 149](https://github.com/mity/md4c/issues/149)
+
+```````````````````````````````` example
+- <script>
+- foo
+bar
+</script>
+.
+<ul>
+<li><script>
+</li>
+<li>foo
+bar
+</script></li>
+</ul>
+````````````````````````````````
+
+
 ## Code coverage
 
 ### `md_is_unicode_whitespace__()`
