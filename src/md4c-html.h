@@ -2,7 +2,7 @@
  * MD4C: Markdown parser for C
  * (http://github.com/mity/md4c)
  *
- * Copyright (c) 2016-2017 Martin Mitas
+ * Copyright (c) 2016-2024 Martin Mitáš
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -49,7 +49,7 @@
  * Callback process_output() gets called with chunks of HTML output.
  * (Typical implementation may just output the bytes to a file or append to
  * some buffer).
- * Param userdata is just propgated back to process_output() callback.
+ * Param userdata is just propagated back to process_output() callback.
  * Param parser_flags are flags from md4c.h propagated to md_parse().
  * Param render_flags is bitmask of MD_HTML_FLAG_xxxx.
  *

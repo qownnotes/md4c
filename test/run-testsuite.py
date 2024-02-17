@@ -6,19 +6,17 @@ from difflib import unified_diff
 import argparse
 import re
 import json
-from cmark import CMark
+from prog import Prog
 from normalize import normalize_html
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run cmark tests.')
+    parser = argparse.ArgumentParser(description='Run Markdown tests.')
     parser.add_argument('-p', '--program', dest='program', nargs='?', default=None,
             help='program to test')
     parser.add_argument('-s', '--spec', dest='spec', nargs='?', default='spec.txt',
             help='path to spec')
     parser.add_argument('-P', '--pattern', dest='pattern', nargs='?',
             default=None, help='limit to sections matching regex pattern')
-    parser.add_argument('--library-dir', dest='library_dir', nargs='?',
-            default=None, help='directory containing dynamic library')
     parser.add_argument('--no-normalize', dest='normalize',
             action='store_const', const=False, default=True,
             help='do not normalize HTML')
@@ -39,11 +37,12 @@ def print_test_header(headertext, example_number, start_line, end_line):
     out("Example %d (lines %d-%d) %s\n" % (example_number,start_line,end_line,headertext))
 
 def do_test(test, normalize, result_counts):
-    [retcode, actual_html, err] = cmark.to_html(test['markdown'])
+    prog = Prog(cmdline=args.program, default_options=test['cmdline_options'])
+    [retcode, actual_html, err] = prog.to_html(test['markdown'])
     if retcode == 0:
         expected_html = test['html']
         unicode_error = None
-        if normalize:
+        if normalize and not test['no_normalize']:
             try:
                 passed = normalize_html(actual_html) == normalize_html(expected_html)
             except UnicodeDecodeError as e:
@@ -81,9 +80,11 @@ def get_tests(specfile):
     example_number = 0
     markdown_lines = []
     html_lines = []
+    cmdline_lines = []
     state = 0  # 0 regular text, 1 markdown example, 2 html output
     headertext = ''
     tests = []
+    no_normalize = 0
 
     header_re = re.compile('#+ ')
 
@@ -91,31 +92,38 @@ def get_tests(specfile):
         for line in specf:
             line_number = line_number + 1
             l = line.strip()
-            #if l == "`" * 32 + " example":
             if re.match("`{32} example( [a-z]{1,})?", l):
                 state = 1
-            elif state == 2 and l == "`" * 32:
+                if re.search("\\[no-normalize\\]", l):
+                    no_normalize = 1
+            elif state >= 2 and l == "`" * 32:
                 state = 0
                 example_number = example_number + 1
                 end_line = line_number
                 tests.append({
                     "markdown":''.join(markdown_lines).replace('→',"\t"),
                     "html":''.join(html_lines).replace('→',"\t"),
+                    "no_normalize": no_normalize,
+                    "cmdline_options":''.join(cmdline_lines),
                     "example": example_number,
                     "start_line": start_line,
                     "end_line": end_line,
-                    "section": headertext})
+                    "section": headertext,})
                 start_line = 0
                 markdown_lines = []
                 html_lines = []
+                cmdline_lines = []
+                no_normalize = 0
             elif l == ".":
-                state = 2
+                state += 1
             elif state == 1:
                 if start_line == 0:
                     start_line = line_number - 1
                 markdown_lines.append(line)
             elif state == 2:
                 html_lines.append(line)
+            elif state == 3:
+                cmdline_lines.append(line)
             elif state == 0 and re.match(header_re, line):
                 headertext = header_re.sub('', line).strip()
     return tests
@@ -136,7 +144,6 @@ if __name__ == "__main__":
         exit(0)
     else:
         skipped = len(all_tests) - len(tests)
-        cmark = CMark(prog=args.program, library_dir=args.library_dir)
         result_counts = {'pass': 0, 'fail': 0, 'error': 0, 'skip': skipped}
         for test in tests:
             do_test(test, args.normalize, result_counts)

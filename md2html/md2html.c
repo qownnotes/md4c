@@ -2,7 +2,7 @@
  * MD4C: Markdown parser for C
  * (http://github.com/mity/md4c)
  *
- * Copyright (c) 2016-2020 Martin Mitas
+ * Copyright (c) 2016-2024 Martin Mitáš
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -43,6 +43,10 @@ static unsigned parser_flags = 0;
 static int want_fullhtml = 0;
 static int want_xhtml = 0;
 static int want_stat = 0;
+static int want_replay_fuzz = 0;
+
+static const char* html_title = NULL;
+static const char* css_path = NULL;
 
 
 /*********************************
@@ -112,13 +116,15 @@ process_output(const MD_CHAR* text, MD_SIZE size, void* userdata)
 }
 
 static int
-process_file(FILE* in, FILE* out)
+process_file(const char* in_path, FILE* in, FILE* out)
 {
-    MD_SIZE n;
+    size_t n;
     struct membuffer buf_in = {0};
     struct membuffer buf_out = {0};
     int ret = -1;
     clock_t t0, t1;
+    unsigned p_flags = parser_flags;
+    unsigned r_flags = renderer_flags;
 
     membuf_init(&buf_in, 32 * 1024);
 
@@ -135,14 +141,37 @@ process_file(FILE* in, FILE* out)
 
     /* Input size is good estimation of output size. Add some more reserve to
      * deal with the HTML header/footer and tags. */
-    membuf_init(&buf_out, buf_in.size + buf_in.size/8 + 64);
+    membuf_init(&buf_out, (MD_SIZE)(buf_in.size + buf_in.size/8 + 64));
+
+    /* Special mode for reproduce test case found with fuzzing a tool.
+     * We assume file format as produced by test/fuzzers/fuzz-mdhtml.c. */
+    if(want_replay_fuzz) {
+        if(buf_in.size < 2 * sizeof(unsigned)) {
+            fprintf(stderr, "File %s isn't valid fuzz test case.\n", in_path);
+            ret = -1;
+            goto out;
+        }
+
+        /* Override parser and renderer flags with those form the test case. */
+        p_flags = ((unsigned*)buf_in.data)[0];
+        r_flags = ((unsigned*)buf_in.data)[1];
+
+        /* And get rid of them from the text input to the parser. */
+        memmove(buf_in.data, buf_in.data + 2 * sizeof(unsigned),
+                    buf_in.size - 2 * sizeof(unsigned));
+        buf_in.size -= 2 * sizeof(unsigned);
+
+        /* Zero the tail we have moved the contents from.
+         * It helps in debugging if make it actually a zero-terminated string. */
+        memset(buf_in.data + buf_in.size, 0, 2 * sizeof(unsigned));
+    }
 
     /* Parse the document. This shall call our callbacks provided via the
      * md_renderer_t structure. */
     t0 = clock();
 
-    ret = md_html(buf_in.data, buf_in.size, process_output, (void*) &buf_out,
-                    parser_flags, renderer_flags);
+    ret = md_html(buf_in.data, (MD_SIZE)buf_in.size, process_output,
+                (void*) &buf_out, p_flags, r_flags);
 
     t1 = clock();
     if(ret != 0) {
@@ -156,14 +185,20 @@ process_file(FILE* in, FILE* out)
             fprintf(out, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
             fprintf(out, "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" "
                             "\"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n");
-            fprintf(out, "<html xmlns=\"http://www.w3.org/1999/xhtml\">");
+            fprintf(out, "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n");
         } else {
             fprintf(out, "<!DOCTYPE html>\n");
             fprintf(out, "<html>\n");
         }
         fprintf(out, "<head>\n");
-        fprintf(out, "<title></title>\n");
+        fprintf(out, "<title>%s</title>\n", html_title ? html_title : "");
         fprintf(out, "<meta name=\"generator\" content=\"md2html\"%s>\n", want_xhtml ? " /" : "");
+#if !defined MD4C_USE_ASCII && !defined MD4C_USE_UTF16
+        fprintf(out, "<meta charset=\"UTF-8\"%s>\n", want_xhtml ? " /" : "");
+#endif
+        if(css_path != NULL) {
+            fprintf(out, "<link rel=\"stylesheet\" href=\"%s\"%s>\n", css_path, want_xhtml ? " /" : "");
+        }
         fprintf(out, "</head>\n");
         fprintf(out, "<body>\n");
     }
@@ -204,6 +239,9 @@ static const CMDLINE_OPTION cmdline_options[] = {
     { 'h', "help",                          'h', 0 },
     { 'v', "version",                       'v', 0 },
 
+    {  0,  "html-title",                    '1', CMDLINE_OPTFLAG_REQUIREDARG },
+    {  0,  "html-css",                      '2', CMDLINE_OPTFLAG_REQUIREDARG },
+
     {  0,  "commonmark",                    'c', 0 },
     {  0,  "github",                        'g', 0 },
 
@@ -211,6 +249,7 @@ static const CMDLINE_OPTION cmdline_options[] = {
     {  0,  "flatex-math",                   'L', 0 },
     {  0,  "fpermissive-atx-headers",       'A', 0 },
     {  0,  "fpermissive-autolinks",         'V', 0 },
+    {  0,  "fhard-soft-breaks",             'B', 0 },
     {  0,  "fpermissive-email-autolinks",   '@', 0 },
     {  0,  "fpermissive-url-autolinks",     'U', 0 },
     {  0,  "fpermissive-www-autolinks",     '.', 0 },
@@ -225,6 +264,9 @@ static const CMDLINE_OPTION cmdline_options[] = {
     {  0,  "fno-html-spans",                'G', 0 },
     {  0,  "fno-html",                      'H', 0 },
     {  0,  "fno-indented-code",             'I', 0 },
+
+    /* Undocumented option for replaying test cases from fuzzers. */
+    {  0,  "replay-fuzz",                   'r', 0 },
 
     {  0,  NULL,                             0,  0 }
 };
@@ -264,6 +306,8 @@ usage(void)
         "      --fpermissive-autolinks\n"
         "                       Same as --fpermissive-url-autolinks --fpermissive-www-autolinks\n"
         "                       --fpermissive-email-autolinks\n"
+        "      --fhard-soft-breaks\n"
+        "                       Force all soft breaks to act as hard breaks\n"
         "      --fstrikethrough Enable strike-through spans\n"
         "      --ftables        Enable tables\n"
         "      --ftasklists     Enable task lists\n"
@@ -282,6 +326,8 @@ usage(void)
         "HTML generator options:\n"
         "      --fverbatim-entities\n"
         "                       Do not translate entities\n"
+        "      --html-title=TITLE Sets the title of the document\n"
+        "      --html-css=URL   In full HTML or XHTML mode add a css link\n"
         "\n"
     );
 }
@@ -298,6 +344,8 @@ static const char* output_path = NULL;
 static int
 cmdline_callback(int opt, char const* value, void* data)
 {
+    (void) data;   /* unused parameter */
+
     switch(opt) {
         case 0:
             if(input_path) {
@@ -312,11 +360,15 @@ cmdline_callback(int opt, char const* value, void* data)
         case 'f':   want_fullhtml = 1; break;
         case 'x':   want_xhtml = 1; renderer_flags |= MD_HTML_FLAG_XHTML; break;
         case 's':   want_stat = 1; break;
+        case 'r':   want_replay_fuzz = 1; break;
         case 'h':   usage(); exit(0); break;
         case 'v':   version(); exit(0); break;
 
-        case 'c':   parser_flags = MD_DIALECT_COMMONMARK; break;
-        case 'g':   parser_flags = MD_DIALECT_GITHUB; break;
+        case '1':   html_title = value; break;
+        case '2':   css_path = value; break;
+
+        case 'c':   parser_flags |= MD_DIALECT_COMMONMARK; break;
+        case 'g':   parser_flags |= MD_DIALECT_GITHUB; break;
 
         case 'E':   renderer_flags |= MD_HTML_FLAG_VERBATIM_ENTITIES; break;
         case 'A':   parser_flags |= MD_FLAG_PERMISSIVEATXHEADERS; break;
@@ -335,6 +387,7 @@ cmdline_callback(int opt, char const* value, void* data)
         case 'K':   parser_flags |= MD_FLAG_WIKILINKS; break;
         case 'X':   parser_flags |= MD_FLAG_TASKLISTS; break;
         case '_':   parser_flags |= MD_FLAG_UNDERLINE; break;
+        case 'B':   parser_flags |= MD_FLAG_HARD_SOFT_BREAKS; break;
 
         default:
             fprintf(stderr, "Illegal option: %s\n", value);
@@ -373,7 +426,7 @@ main(int argc, char** argv)
         }
     }
 
-    ret = process_file(in, out);
+    ret = process_file((input_path != NULL) ? input_path : "<stdin>", in, out);
     if(in != stdin)
         fclose(in);
     if(out != stdout)
