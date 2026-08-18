@@ -2548,6 +2548,7 @@ struct MD_MARK_tag {
 #define MD_MARK_EMPH_MOD3_1                 0x80
 #define MD_MARK_EMPH_MOD3_2                 (0x40 | 0x80)
 #define MD_MARK_EMPH_MOD3_MASK              (0x40 | 0x80)
+#define MD_MARK_UNDERLINE_BARRIER            0x20
 #define MD_MARK_AUTOLINK                    0x20  /* Distinguisher for '<', '>'. */
 #define MD_MARK_AUTOLINK_MISSING_MAILTO     0x40
 #define MD_MARK_VALIDPERMISSIVEAUTOLINK     0x20  /* For permissive autolinks. */
@@ -3073,6 +3074,8 @@ md_collect_marks(MD_CTX* ctx, const MD_LINE* lines, MD_SIZE n_lines, int table_m
 
                 /* Intra-word underscore doesn't have special meaning. */
                 if(ch == _T('_')  &&  left_level == 2  &&  right_level == 2) {
+                    if(ctx->parser.flags & MD_FLAG_UNDERLINE)
+                        ADD_MARK(ch, off, tmp, MD_MARK_UNDERLINE_BARRIER);
                     left_level = 0;
                     right_level = 0;
                 }
@@ -3760,6 +3763,24 @@ static void
 md_analyze_emph(MD_CTX* ctx, int mark_index)
 {
     MD_MARK* mark = &ctx->marks[mark_index];
+
+    if(mark->ch == _T('_')  &&  (mark->flags & MD_MARK_UNDERLINE_BARRIER)) {
+        SZ barrier_size = mark->end - mark->beg;
+        MD_MARKSTACK* stack = &UNDERSCORE_OPENERS_oo_mod3_0;
+        int i;
+
+        for(i = 0; i < 6; i++, stack++) {
+            int* link = &stack->top;
+            while(*link >= 0) {
+                MD_MARK* opener = &ctx->marks[*link];
+                if(opener->end - opener->beg == barrier_size)
+                    *link = opener->next;
+                else
+                    link = &opener->next;
+            }
+        }
+        return;
+    }
 
     /* If we can be a closer, try to resolve with the preceding opener. */
     if(mark->flags & MD_MARK_POTENTIAL_CLOSER) {
