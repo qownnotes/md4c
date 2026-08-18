@@ -1983,8 +1983,8 @@ Here is a simple example with backticks:
  >
 ```
 .
-<pre><code>&lt;
- &gt;
+<pre><code><
+ >
 </code></pre>
 ````````````````````````````````
 
@@ -1997,8 +1997,8 @@ With tildes:
  >
 ~~~
 .
-<pre><code>&lt;
- &gt;
+<pre><code><
+ >
 </code></pre>
 ````````````````````````````````
 

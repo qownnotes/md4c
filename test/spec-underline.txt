@@ -45,3 +45,18 @@ _foo _bar
 .
 --funderline
 ````````````````````````````````
+
+An invalid intra-word delimiter run prevents an earlier run of the same length
+from pairing with a later delimiter. Shorter intra-word runs remain literal
+inside a valid underline span.
+
+```````````````````````````````` example
+__Test__Broken - because of a missing space after the closing "__" !!!
+
+__foo_bar__
+.
+<p>__Test__Broken - because of a missing space after the closing &quot;__&quot; !!!</p>
+<p><u><u>foo_bar</u></u></p>
+.
+--funderline
+````````````````````````````````

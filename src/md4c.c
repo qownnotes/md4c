@@ -3764,7 +3764,9 @@ md_analyze_emph(MD_CTX* ctx, int mark_index)
 {
     MD_MARK* mark = &ctx->marks[mark_index];
 
-    if(mark->ch == _T('_')  &&  (mark->flags & MD_MARK_UNDERLINE_BARRIER)) {
+    if((ctx->parser.flags & MD_FLAG_UNDERLINE)  &&  mark->ch == _T('_')  &&
+       (mark->flags & MD_MARK_UNDERLINE_BARRIER)  &&
+       !(mark->flags & (MD_MARK_POTENTIAL_OPENER | MD_MARK_POTENTIAL_CLOSER))) {
         SZ barrier_size = mark->end - mark->beg;
         MD_MARKSTACK* stack = &UNDERSCORE_OPENERS_oo_mod3_0;
         int i;
